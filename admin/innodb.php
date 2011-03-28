@@ -23,10 +23,14 @@
         echo $OUTPUT->notification('Please be patient and wait for this to complete...', 'notifysuccess');
 
         if ($tables = $DB->get_tables()) {
-            $DB->set_debug(true);
             foreach ($tables as $table) {
+                $DB->set_debug(false);
                 $fulltable = $DB->get_prefix().$table;
-                $DB->change_database_structure("ALTER TABLE $fulltable TYPE=INNODB");
+                $rs = $DB->get_records_sql("SHOW TABLE STATUS LIKE '$fulltable'");
+                if(strtoupper($rs[$fulltable]->engine) !== 'INNODB') {
+                    $DB->set_debug(true);
+                    $DB->change_database_structure("ALTER TABLE `$fulltable` ENGINE = INNODB");
+                }                
             }
             $DB->set_debug(false);
         }
@@ -41,5 +45,3 @@
         echo $OUTPUT->confirm('Are you sure you want convert all your tables to the InnoDB format?', $formcontinue, $formcancel);
         echo $OUTPUT->footer();
     }
-
-
