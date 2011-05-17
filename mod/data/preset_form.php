@@ -55,3 +55,12 @@ class data_save_preset_form extends moodleform {
         $this->_form->addElement('submit', 'saveaspreset', get_string('continue'));
     }
 }
+
+class data_delete_preset_form extends moodleform {
+    public function definition() {
+        $this->_form->addElement('header', 'exportheading', get_string('delete'));
+        $this->_form->addElement('hidden', 'd');
+        $this->_form->addElement('hidden', 'delete', 'all');
+        $this->_form->addElement('submit', 'deletedatabase', get_string('deleteallentries', 'data'));
+    }
+}

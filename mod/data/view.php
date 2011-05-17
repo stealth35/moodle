@@ -39,7 +39,7 @@
     $page = optional_param('page', 0, PARAM_INT);
 /// These can be added to perform an action on a record
     $approve = optional_param('approve', 0, PARAM_INT);    //approval recordid
-    $delete = optional_param('delete', 0, PARAM_INT);    //delete recordid
+    $delete = optional_param('delete', 0, PARAM_ALPHANUM);    //delete recordid
 
     if ($id) {
         if (! $cm = get_coursemodule_from_id('data', $id)) {
@@ -349,36 +349,51 @@
 
     if ($delete && confirm_sesskey() && (has_capability('mod/data:manageentries', $context) or data_isowner($delete))) {
         if ($confirm = optional_param('confirm',0,PARAM_INT)) {
-            if ($deleterecord = $DB->get_record('data_records', array('id'=>$delete))) {   // Need to check this is valid
-                if ($deleterecord->dataid == $data->id) {                       // Must be from this database
-                    if ($contents = $DB->get_records('data_content', array('recordid'=>$deleterecord->id))) {
-                        foreach ($contents as $content) {  // Delete files or whatever else this field allows
-                            if ($field = data_get_field_from_id($content->fieldid, $data)) { // Might not be there
-                                $field->delete_content($content->recordid);
+            if($delete == 'all') {
+                $deleterecords = $DB->get_records('data_records', array('dataid'=>$data->id));
+            } else {
+                $deleterecords[] = $DB->get_record('data_records', array('id'=>$delete));
+            }
+            if (is_array($deleterecords)) {   // Need to check this is valid
+                foreach($deleterecords as $deleterecord) {
+                    if ($deleterecord->dataid == $data->id) {                       // Must be from this database
+                        if ($contents = $DB->get_records('data_content', array('recordid'=>$deleterecord->id))) {
+                            foreach ($contents as $content) {  // Delete files or whatever else this field allows
+                                if ($field = data_get_field_from_id($content->fieldid, $data)) { // Might not be there
+                                    $field->delete_content($content->recordid);
+                                }
                             }
                         }
+                        $DB->delete_records('data_content', array('recordid'=>$deleterecord->id));
+                        $DB->delete_records('data_records', array('id'=>$deleterecord->id));
+
+                        add_to_log($course->id, 'data', 'record delete', "view.php?id=$cm->id", $data->id, $cm->id);
+
+                        echo $OUTPUT->notification(get_string('recorddeleted','data'), 'notifysuccess');
                     }
-                    $DB->delete_records('data_content', array('recordid'=>$deleterecord->id));
-                    $DB->delete_records('data_records', array('id'=>$deleterecord->id));
-
-                    add_to_log($course->id, 'data', 'record delete', "view.php?id=$cm->id", $data->id, $cm->id);
-
-                    echo $OUTPUT->notification(get_string('recorddeleted','data'), 'notifysuccess');
                 }
             }
 
         } else {   // Print a confirmation page
-            if ($deleterecord = $DB->get_record('data_records', array('id'=>$delete))) {   // Need to check this is valid
-                if ($deleterecord->dataid == $data->id) {                       // Must be from this database
-                    $deletebutton = new single_button(new moodle_url('/mod/data/view.php?d='.$data->id.'&delete='.$delete.'&confirm=1'), get_string('delete'), 'post');
-                    echo $OUTPUT->confirm(get_string('confirmdeleterecord','data'),
-                            $deletebutton, 'view.php?d='.$data->id);
+            if($delete == 'all') {
+                $deletebutton = new single_button(new moodle_url('/mod/data/view.php?d='.$data->id.'&delete=all&confirm=1'), get_string('delete'), 'post');
+                echo $OUTPUT->confirm(get_string('deleteallentries', 'data'),
+                                $deletebutton, 'view.php?d='.$data->id);
+                $OUTPUT->footer();
+                exit;
+            } else {
+                if ($deleterecord = $DB->get_record('data_records', array('id'=>$delete))) {   // Need to check this is valid
+                    if ($deleterecord->dataid == $data->id) {                       // Must be from this database
+                        $deletebutton = new single_button(new moodle_url('/mod/data/view.php?d='.$data->id.'&delete='.$delete.'&confirm=1'), get_string('delete'), 'post');
+                        echo $OUTPUT->confirm(get_string('confirmdeleterecord','data'),
+                                $deletebutton, 'view.php?d='.$data->id);
 
-                    $records[] = $deleterecord;
-                    echo data_print_template('singletemplate', $records, $data, '', 0, true);
+                        $records[] = $deleterecord;
+                        echo data_print_template('singletemplate', $records, $data, '', 0, true);
 
-                    echo $OUTPUT->footer();
-                    exit;
+                        echo $OUTPUT->footer();
+                        exit;
+                    }
                 }
             }
         }

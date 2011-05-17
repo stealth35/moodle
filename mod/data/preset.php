@@ -86,6 +86,9 @@ $form_export->set_data(array('d' => $data->id));
 $form_save = new data_save_preset_form();
 $form_save->set_data(array('d' => $data->id, 'name'=>$data->name));
 
+$form_delete = new data_delete_preset_form(new moodle_url('/mod/data/view.php'), null, 'get');
+$form_delete->set_data(array('d' => $data->id));
+
 /* Output */
 if (!$form_export->is_submitted()) {
     echo $OUTPUT->header();
@@ -223,5 +226,8 @@ $form_save->display();
 echo $OUTPUT->heading(get_string('import'));
 $form_importzip->display();
 $form_importexisting->display();
+
+// Delete form
+$form_delete->display();
 
 echo $OUTPUT->footer();
